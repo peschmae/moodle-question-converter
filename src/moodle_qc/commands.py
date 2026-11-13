@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
 from moodle_qc.collection import Collection
-from moodle_qc.convert import import_file, load_question
+from moodle_qc.convert import import_file
 from moodle_qc.extract import extract as extract_sources
+from moodle_qc.validate import Problem, validate
 
 
 def open_collection(paths: Sequence[Path], root_category: str | None = None) -> Collection:
@@ -17,12 +19,33 @@ def open_collection(paths: Sequence[Path], root_category: str | None = None) -> 
 
 
 def generate(paths: Sequence[Path], output: Path, root_category: str | None = None) -> int:
-    """Write one import file for the selected question sources."""
+    """Write one import file for the selected question sources; nothing if any is invalid."""
     collection = open_collection(paths, root_category)
-    questions = [load_question(collection, path) for path in collection.sources(paths)]
-    output.write_text(import_file(collection, questions), encoding="utf-8")
-    print(f"Wrote {len(questions)} question(s) to {output}")
+    result = validate(collection, paths)
+    if result.problems:
+        _report(result.problems)
+        print("No import file written.", file=sys.stderr)
+        return 1
+    output.write_text(import_file(collection, result.questions), encoding="utf-8")
+    print(f"Wrote {len(result.questions)} question(s) to {output}")
     return 0
+
+
+def check(paths: Sequence[Path]) -> int:
+    """Validate the selected question sources without writing anything."""
+    collection = open_collection(paths)
+    result = validate(collection, paths)
+    if result.problems:
+        _report(result.problems)
+        return 1
+    print(f"OK: {len(result.questions)} question(s) checked.")
+    return 0
+
+
+def _report(problems: Sequence[Problem]) -> None:
+    for problem in problems:
+        print(problem, file=sys.stderr)
+    print(f"{len(problems)} problem(s) found.", file=sys.stderr)
 
 
 def extract(export: Path, into: Path) -> int:

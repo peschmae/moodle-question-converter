@@ -32,6 +32,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _add_root_category(generate)
 
+    check = subcommands.add_parser("check", help="validate question sources, write nothing")
+    check.add_argument("paths", nargs="+", type=Path, help="question sources or folders")
+
     extract = subcommands.add_parser(
         "extract", help="turn a Moodle XML export into question sources"
     )
@@ -58,6 +61,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "generate":
             return commands.generate(args.paths, args.output, args.root_category)
+        if args.command == "check":
+            return commands.check(args.paths)
         if args.command == "extract":
             return commands.extract(args.export, args.into)
     except UserError as error:
