@@ -8,7 +8,7 @@ from importlib.metadata import version
 PROG = "moodle-qc"
 
 
-def _parser() -> argparse.ArgumentParser:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG,
         description=(
@@ -22,7 +22,7 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command line with ``argv`` and return the exit code."""
-    parser = _parser()
+    parser = _build_parser()
     try:
         parser.parse_args(argv)
     except SystemExit as exit_:
