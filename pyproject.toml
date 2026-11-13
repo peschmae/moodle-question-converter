@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Question converter: Markdown question sources to Moodle XML import files and back"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pyyaml>=6.0.3",
+]
 
 [project.scripts]
 moodle-qc = "moodle_qc.cli:run"
@@ -14,6 +16,7 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
     "mypy>=1.11",
+    "types-pyyaml>=6.0.12.20261113",
 ]
 
 [build-system]
@@ -35,7 +38,7 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 # Question texts are German and use typographic dashes and quotes.
-allowed-confusables = ["–", "«", "»"]
+allowed-confusables = ["–", "−", "«", "»", "×"]
 
 [tool.ruff.lint.per-file-ignores]
 # Inline Moodle XML in tests is easier to read unwrapped.

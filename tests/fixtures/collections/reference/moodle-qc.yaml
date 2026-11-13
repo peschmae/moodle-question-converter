@@ -1,0 +1,13 @@
+# Reproduces tests/fixtures/moodle/moodle-xml-reference.xml
+root_category: import-test
+defaults:
+  tags: [26hs]
+  feedback:
+    correct: Die Antwort ist richtig.
+    partially: Die Antwort ist teilweise richtig.
+    incorrect: Die Antwort ist falsch.
+types:
+  kprime:
+    labels: [richtig, falsch]
+  mtf:
+    labels: [richtig, falsch]

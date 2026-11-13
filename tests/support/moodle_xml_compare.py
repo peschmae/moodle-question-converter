@@ -90,26 +90,40 @@ class _Document:
     """Question identity → questions with that identity, in document order."""
 
 
-def compare_moodle_xml(expected: str, actual: str) -> list[Difference]:
-    """Return the content differences between two Moodle XML documents (empty if equal)."""
-    expected_document, actual_document = _parse(expected), _parse(actual)
+def compare_moodle_xml(
+    expected: str, actual: str, *, ignore_question_ids: bool = False
+) -> list[Difference]:
+    """Return the content differences between two Moodle XML documents (empty if equal).
+
+    ``ignore_question_ids`` compares hand-made fixtures without ``<idnumber>`` to generated
+    import files, which always carry a question ID.
+    """
+    expected_document = _parse(expected, ignore_question_ids)
+    actual_document = _parse(actual, ignore_question_ids)
     return _compare_categories(expected_document, actual_document) + _compare_questions(
         expected_document, actual_document
     )
 
 
-def assert_moodle_xml_equal(expected: str, actual: str) -> None:
+def assert_moodle_xml_equal(
+    expected: str, actual: str, *, ignore_question_ids: bool = False
+) -> None:
     """Fail with all differences listed if the documents differ in content."""
-    differences = compare_moodle_xml(expected, actual)
+    differences = compare_moodle_xml(expected, actual, ignore_question_ids=ignore_question_ids)
     if differences:
         listing = "\n".join(f"  - {d}" for d in differences)
         raise AssertionError(f"Moodle XML differs in {len(differences)} place(s):\n{listing}")
 
 
-def _parse(document: str) -> _Document:
+def _parse(document: str, ignore_question_ids: bool) -> _Document:
     categories: dict[str, str] = {}
     questions: dict[tuple[str, str], list[_Question]] = defaultdict(list)
-    for question in _questions(ET.fromstring(document), categories):
+    root = ET.fromstring(document)
+    if ignore_question_ids:
+        for element in root.findall("question"):
+            for idnumber in element.findall("idnumber"):
+                element.remove(idnumber)
+    for question in _questions(root, categories):
         questions[question.identity].append(question)
     for path in list(categories):
         for parent in _parents(path):
@@ -270,3 +284,20 @@ def _child_tags(*elements: ET.Element) -> list[str]:
             if child.tag not in tags:
                 tags.append(child.tag)
     return tags
+
+
+def select_questions(document: str, *qtypes: str) -> str:
+    """Only the questions of ``qtypes`` (and the categories holding them) from a Moodle XML
+    document."""
+    root = ET.fromstring(document)
+    pending_category: ET.Element | None = None
+    for element in list(root.findall("question")):
+        root.remove(element)
+        if element.get("type") == "category":
+            pending_category = element
+        elif element.get("type") in qtypes:
+            if pending_category is not None:
+                root.append(pending_category)
+                pending_category = None
+            root.append(element)
+    return ET.tostring(root, encoding="unicode")
