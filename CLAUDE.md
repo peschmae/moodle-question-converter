@@ -1,6 +1,6 @@
 # moodle-qc
 
-Command-line tool that converts Markdown question sources to Moodle XML import files and back. Nothing is implemented yet; this repo holds the design.
+Command-line tool that converts Markdown question sources to Moodle XML import files and back. Implementation follows the GitHub issues (#1 … #13).
 
 Read before working:
 
@@ -18,3 +18,5 @@ Conventions:
 - Python. Distributed as a Docker image and via this repo (no PyPI).
 - Tests on two levels: unit tests at each module's public interface, and integration tests that run the commands (`generate`, `extract`, `check`, `preview`) in-process on temporary folders. Compare Moodle XML by content, not formatting.
 - Write text into Moodle XML as CDATA, not XML escaping.
+
+Development (uv): `uv sync`, then `uv run pytest`, `uv run mypy`, `uv run ruff check .`, `uv run ruff format .`. Code lives in `src/moodle_qc/`; tests in `tests/unit/` (module interfaces) and `tests/integration/` (commands in-process). `tests/support/moodle_xml_compare.py` compares Moodle XML by content: use `assert_moodle_xml_equal` in integration and round-trip tests.
