@@ -4,9 +4,17 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-from moodle_qc.qtypes.base import ReadResult, add_field, flag, read_field, read_flag, text_of
+from moodle_qc.qtypes.base import (
+    BaseQuestionType,
+    ReadResult,
+    add_field,
+    flag,
+    read_field,
+    read_flag,
+    text_of,
+)
 from moodle_qc.question import Question, Render, ToMarkdown
-from moodle_qc.source import Answer
+from moodle_qc.source import Answer, SourceDocument
 from moodle_qc.xmlnode import Node
 
 NUMBERING = ("abc", "ABCD", "123", "iii", "IIII", "none")
@@ -53,7 +61,7 @@ def valid_grade(value: float) -> bool:
     return any(abs(abs(value) - option) < _TOLERANCE for option in GRADE_OPTIONS)
 
 
-class MultiChoice:
+class MultiChoice(BaseQuestionType):
     name = "multichoice"
     front_matter_keys = frozenset({"multiple", "numbering", "show_instruction"})
     has_answers = True
@@ -98,7 +106,13 @@ class MultiChoice:
             element.attrs = {"fraction": format_fraction(value), "format": "html"}
             add_field(element, "feedback", answer.feedback, render)
 
-    def read(self, element: ET.Element, text: str, to_markdown: ToMarkdown) -> ReadResult:
+    def read(
+        self,
+        element: ET.Element,
+        text: str,
+        to_markdown: ToMarkdown,
+        existing: SourceDocument | None = None,
+    ) -> ReadResult:
         values: list[float] = []
         answers: list[Answer] = []
         for answer_element in element.findall("answer"):

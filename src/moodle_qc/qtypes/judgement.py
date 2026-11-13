@@ -9,13 +9,21 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from typing import Any
 
-from moodle_qc.qtypes.base import ReadResult, add_field, flag, read_field, read_flag, text_of
+from moodle_qc.qtypes.base import (
+    BaseQuestionType,
+    ReadResult,
+    add_field,
+    flag,
+    read_field,
+    read_flag,
+    text_of,
+)
 from moodle_qc.question import Question, Render, ToMarkdown
-from moodle_qc.source import Answer
+from moodle_qc.source import Answer, SourceDocument
 from moodle_qc.xmlnode import Node
 
 
-class _Judgement:
+class _Judgement(BaseQuestionType):
     name: str
     scoring_methods: tuple[str, ...]
     front_matter_keys = frozenset({"scoring", "labels"})
@@ -59,7 +67,13 @@ class _Judgement:
     def _write_extra(self, settings: dict[str, Any], node: Node) -> None:
         """Elements only one of the two types has."""
 
-    def read(self, element: ET.Element, text: str, to_markdown: ToMarkdown) -> ReadResult:
+    def read(
+        self,
+        element: ET.Element,
+        text: str,
+        to_markdown: ToMarkdown,
+        existing: SourceDocument | None = None,
+    ) -> ReadResult:
         weights = {
             (weight.get("rownumber"), weight.get("columnnumber")): float(
                 text_of(weight, "value") or 0

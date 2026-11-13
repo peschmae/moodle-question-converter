@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-from moodle_qc.qtypes.base import ReadResult, add_field, flag, read_field, read_flag, text_of
+from moodle_qc.qtypes.base import (
+    BaseQuestionType,
+    ReadResult,
+    add_field,
+    flag,
+    read_field,
+    read_flag,
+    text_of,
+)
 from moodle_qc.question import Question, Render, ToMarkdown
-from moodle_qc.source import Answer
+from moodle_qc.source import Answer, SourceDocument
 from moodle_qc.xmlnode import Node
 
 SCORING_METHODS = ("sconezero", "aprime", "subpoints")
 
 
-class SingleChoice:
+class SingleChoice(BaseQuestionType):
     name = "sc"
     front_matter_keys = frozenset({"scoring", "numbering"})
     has_answers = True
@@ -40,7 +48,13 @@ class SingleChoice:
             add_field(row, "optiontext", answer.text, render)
             add_field(row, "feedbacktext", answer.feedback, render)
 
-    def read(self, element: ET.Element, text: str, to_markdown: ToMarkdown) -> ReadResult:
+    def read(
+        self,
+        element: ET.Element,
+        text: str,
+        to_markdown: ToMarkdown,
+        existing: SourceDocument | None = None,
+    ) -> ReadResult:
         correct_row = text_of(element, "correctrow")
         answers = [
             Answer(

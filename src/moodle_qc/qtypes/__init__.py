@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 from moodle_qc.qtypes.base import QuestionType
+from moodle_qc.qtypes.ddwtos import DragAndDropIntoText
 from moodle_qc.qtypes.judgement import KPrime, MultipleTrueFalse
 from moodle_qc.qtypes.multichoice import MultiChoice
 from moodle_qc.qtypes.sc import SingleChoice
 
 HANDLERS: dict[str, QuestionType] = {
     handler.name: handler
-    for handler in (SingleChoice(), MultiChoice(), KPrime(), MultipleTrueFalse())
+    for handler in (
+        SingleChoice(),
+        MultiChoice(),
+        KPrime(),
+        MultipleTrueFalse(),
+        DragAndDropIntoText(),
+    )
 }
 """Supported question types by Moodle type name."""
 

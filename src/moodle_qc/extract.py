@@ -81,9 +81,12 @@ def _plan(
     folder = collection.root / folder_for_category(category)
     path = _free_path(folder, slug(name) or "question", taken)
     derived_id = question_id_from_path(collection.relative(path))
-    explicit_id = question_id or question_id_from_category(exported.category, name)
-    if explicit_id != derived_id:
-        document.front_matter = {"id": explicit_id, **document.front_matter}
+    if not question_id:
+        # Moodle has no question ID yet: record the new one so the next import carries it.
+        question_id = question_id_from_category(exported.category, name)
+        document.front_matter = {"id": question_id, **document.front_matter}
+    elif question_id != derived_id:
+        document.front_matter = {"id": question_id, **document.front_matter}
     return ExtractedSource(path, format_source(document), replaces_existing=False)
 
 
@@ -116,7 +119,7 @@ def question_document(
             )
         }
         settings["show_num_correct"] = element.find("shownumcorrect") is not None
-    result = handler.read(element, text, markdown)
+    result = handler.read(element, text, markdown, existing)
     settings.update(result.settings)
 
     front_matter: dict[str, Any] = {"type": qtype}

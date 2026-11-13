@@ -1,0 +1,6 @@
+# Reproduces tests/fixtures/moodle/sample-ddwtos.xml
+root_category: alerting
+code_line_height: 2.2
+defaults:
+  points: 4
+  penalty: 0

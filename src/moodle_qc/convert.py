@@ -60,7 +60,7 @@ def question_node(question: Question, collection: Collection) -> Node:
 
     node = Node("question", {"type": question.qtype})
     node.add_text("name", question.name)
-    add_field(node, "questiontext", question.document.text, render_field)
+    add_field(node, "questiontext", handler.question_text(question), render_field)
     add_field(node, "generalfeedback", question.document.solution, render_field)
     node.add("defaultgrade", _number(settings["points"]))
     node.add("penalty", _number(settings["penalty"]))

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from moodle_qc.question import Question, Render, ToMarkdown
-from moodle_qc.source import Answer
+from moodle_qc.source import Answer, SourceDocument
 from moodle_qc.xmlnode import Node
 
 
@@ -41,9 +41,27 @@ class QuestionType(Protocol):
         """Add the type-specific elements to the ``<question>`` node."""
         ...
 
-    def read(self, element: ET.Element, text: str, to_markdown: ToMarkdown) -> ReadResult:
-        """Read the type-specific elements; ``text`` is the question text already in Markdown."""
+    def question_text(self, question: Question) -> str:
+        """The question text (Markdown) as written to Moodle."""
         ...
+
+    def read(
+        self,
+        element: ET.Element,
+        text: str,
+        to_markdown: ToMarkdown,
+        existing: SourceDocument | None = None,
+    ) -> ReadResult:
+        """Read the type-specific elements; ``text`` is the question text already in Markdown,
+        ``existing`` the question source being overwritten (if any)."""
+        ...
+
+
+class BaseQuestionType:
+    """Defaults for handlers."""
+
+    def question_text(self, question: Question) -> str:
+        return question.document.text
 
 
 def add_field(node: Node, tag: str, markdown: str, render: Render, **attrs: str) -> Node:
