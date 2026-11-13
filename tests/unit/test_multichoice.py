@@ -89,3 +89,19 @@ def test_reading_restores_overrides_only_where_they_differ() -> None:
         (True, None),
         (False, None),
     ]
+
+
+def test_one_override_among_three_correct_answers_leaves_the_rest_to_the_others() -> None:
+    items = [
+        Answer("a", True, fraction=50),
+        Answer("b", True),
+        Answer("c", True),
+        Answer("d", False),
+    ]
+
+    element = written(*items)
+
+    assert fractions(element) == ["50", "25", "25", "-33.33333"]
+    assert HANDLER.validate(question("multichoice", *items)) == []
+    result = HANDLER.read(element, "", lambda html, files: html)
+    assert [a.fraction for a in result.answers or []] == [50, None, None, None]

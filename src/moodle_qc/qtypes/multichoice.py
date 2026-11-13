@@ -35,22 +35,47 @@ def is_multiple(answers: list[Answer], setting: object) -> bool:
     return sum(answer.correct for answer in answers) != 1
 
 
-def default_fractions(answers: list[Answer], multiple: bool) -> list[float]:
-    """Percentages without overrides: single → 100/0; multiple → correct answers share 100,
-    wrong answers deduct the same share."""
-    correct = sum(answer.correct for answer in answers)
-    if not multiple:
-        return [100.0 if answer.correct else 0.0 for answer in answers]
-    share = 100.0 / correct if correct else 0.0
-    return [share if answer.correct else -share for answer in answers]
-
-
 def fractions(answers: list[Answer], multiple: bool) -> list[float]:
-    defaults = default_fractions(answers, multiple)
+    """Percentages of the answers. Single: correct 100, wrong 0. Multiple: correct answers
+    without an explicit percentage share what the explicit ones leave of 100 %, wrong answers
+    deduct 100 % divided by the number of correct answers. Explicit ``{n%}`` always wins."""
+    correct = [answer for answer in answers if answer.correct]
+    if not multiple:
+        defaults = {True: 100.0, False: 0.0}
+    else:
+        fixed = sum(a.fraction for a in correct if a.fraction is not None)
+        free = sum(1 for a in correct if a.fraction is None)
+        defaults = {
+            True: (100.0 - fixed) / free if free else 0.0,
+            False: -100.0 / len(correct) if correct else 0.0,
+        }
     return [
-        answer.fraction if answer.fraction is not None else default
-        for answer, default in zip(answers, defaults, strict=True)
+        answer.fraction if answer.fraction is not None else defaults[answer.correct]
+        for answer in answers
     ]
+
+
+def explicit_fractions(values: list[float], multiple: bool) -> list[float | None]:
+    """The inverse of ``fractions``: which percentages must be written as ``{n%}``."""
+    correct = [v for v in values if v > 0]
+    explicit: list[float | None] = [None] * len(values)
+    if not multiple:
+        for index, value in enumerate(values):
+            if abs(value - (100.0 if value > 0 else 0.0)) > _TOLERANCE:
+                explicit[index] = value
+        return explicit
+    # The free share is the most common correct percentage, if the others leave exactly it.
+    free_share = max(set(correct), key=lambda v: (correct.count(v), v)) if correct else 0.0
+    others = [v for v in correct if abs(v - free_share) > _TOLERANCE]
+    free = len(correct) - len(others)
+    if not free or abs((100.0 - sum(others)) / free - free_share) > _TOLERANCE:
+        free_share = float("nan")  # no consistent free share: every correct answer is explicit
+    deduction = -100.0 / len(correct) if correct else 0.0
+    for index, value in enumerate(values):
+        default = free_share if value > 0 else deduction
+        if not abs(value - default) <= _TOLERANCE:  # also true when default is nan
+            explicit[index] = value
+    return explicit
 
 
 def format_fraction(value: float) -> str:
@@ -126,11 +151,9 @@ class MultiChoice(BaseQuestionType):
                 )
             )
         multiple = not read_flag(element.findtext("single"), default=True)
-        for answer, value, default in zip(
-            answers, values, default_fractions(answers, multiple), strict=True
-        ):
-            if abs(value - default) > _TOLERANCE:
-                answer.fraction = float(format_fraction(value))
+        for answer, explicit in zip(answers, explicit_fractions(values, multiple), strict=True):
+            if explicit is not None:
+                answer.fraction = _plain(float(format_fraction(explicit)))
         settings: dict[str, object] = {
             "shuffle": read_flag(element.findtext("shuffleanswers")),
             "numbering": (element.findtext("answernumbering") or "abc").strip(),
@@ -139,3 +162,7 @@ class MultiChoice(BaseQuestionType):
         if multiple != is_multiple(answers, None):
             settings["multiple"] = multiple
         return ReadResult(settings=settings, answers=answers)
+
+
+def _plain(value: float) -> float | int:
+    return int(value) if value.is_integer() else value

@@ -12,14 +12,14 @@ from typing import Any
 from moodle_qc.qtypes.base import (
     BaseQuestionType,
     ReadResult,
-    add_field,
     flag,
-    read_field,
     read_flag,
+    read_rows,
     text_of,
+    write_rows,
 )
 from moodle_qc.question import Question, Render, ToMarkdown
-from moodle_qc.source import Answer, SourceDocument
+from moodle_qc.source import SourceDocument
 from moodle_qc.xmlnode import Node
 
 
@@ -49,10 +49,7 @@ class _Judgement(BaseQuestionType):
         node.add("numberofrows", str(len(answers)))
         node.add("numberofcolumns", "2")
         self._write_extra(settings, node)
-        for number, answer in enumerate(answers, 1):
-            row = node.add("row", number=str(number))
-            add_field(row, "optiontext", answer.text, render)
-            add_field(row, "feedbacktext", answer.feedback, render)
+        write_rows(node, answers, render)
         for number, label in enumerate(settings["labels"], 1):
             column = node.add("column", number=str(number))
             column.add_text("responsetext", str(label), format="moodle_auto_format")
@@ -80,14 +77,10 @@ class _Judgement(BaseQuestionType):
             )
             for weight in element.findall("weight")
         }
-        answers = [
-            Answer(
-                read_field(row.find("optiontext"), to_markdown),
-                weights.get((row.get("number"), "1"), 0) > 0,
-                read_field(row.find("feedbacktext"), to_markdown),
-            )
-            for row in sorted(element.findall("row"), key=lambda r: int(r.get("number", "0")))
-        ]
+        answers = []
+        for number, answer in read_rows(element, to_markdown):
+            answer.correct = weights.get((number, "1"), 0) > 0
+            answers.append(answer)
         columns = sorted(element.findall("column"), key=lambda c: int(c.get("number", "0")))
         settings: dict[str, Any] = {
             "scoring": text_of(element, "scoringmethod"),

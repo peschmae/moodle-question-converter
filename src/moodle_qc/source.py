@@ -37,7 +37,7 @@ SECTIONS = ("Answers", "Solution", "Notes")
 
 _FRONT_MATTER = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
 _SECTION = re.compile(r"^## (Answers|Solution|Notes)\s*$")
-_TITLE = re.compile(r"^# (.+)$")
+_HEADING = re.compile(r"^# (.+)$")
 _ANSWER = re.compile(r"^- \[( |x|X)\] (?:\{(-?\d+(?:\.\d+)?)%\} )?(.*)$")
 _FENCE = re.compile(r"^```")
 
@@ -80,7 +80,8 @@ class SourceDocument:
     """The parsed content of one question source file."""
 
     front_matter: dict[str, Any] = field(default_factory=dict)
-    title: str | None = None
+    heading: str | None = None
+    """The first ``# heading``: the question name unless the front matter sets ``name``."""
     text: str = ""
     answers: list[Answer] | None = None
     solution: str = ""
@@ -104,18 +105,18 @@ def parse_source(content: str, origin: str = "question source") -> SourceDocumen
 
     sections = _split_sections(content)
     body = sections.get("", "")
-    title = None
+    heading = None
     first, _, rest = body.lstrip("\n").partition("\n")
-    title_match = _TITLE.match(first)
-    if title_match:
-        title = title_match.group(1).strip()
+    heading_match = _HEADING.match(first)
+    if heading_match:
+        heading = heading_match.group(1).strip()
         body = rest
     answers = None
     if "Answers" in sections:
         answers = _parse_answers(sections["Answers"], origin)
     return SourceDocument(
         front_matter=front_matter,
-        title=title,
+        heading=heading,
         text=body.strip("\n"),
         answers=answers,
         solution=sections.get("Solution", "").strip("\n"),
@@ -137,8 +138,8 @@ def format_source(document: SourceDocument) -> str:
             width=1000,
         )
         parts.append(f"---\n{dumped}---")
-    if document.title:
-        parts.append(f"# {document.title}")
+    if document.heading:
+        parts.append(f"# {document.heading}")
     if document.text:
         parts.append(document.text)
     if document.answers is not None:

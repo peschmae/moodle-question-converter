@@ -7,14 +7,14 @@ import xml.etree.ElementTree as ET
 from moodle_qc.qtypes.base import (
     BaseQuestionType,
     ReadResult,
-    add_field,
     flag,
-    read_field,
     read_flag,
+    read_rows,
     text_of,
+    write_rows,
 )
 from moodle_qc.question import Question, Render, ToMarkdown
-from moodle_qc.source import Answer, SourceDocument
+from moodle_qc.source import SourceDocument
 from moodle_qc.xmlnode import Node
 
 SCORING_METHODS = ("sconezero", "aprime", "subpoints")
@@ -43,10 +43,7 @@ class SingleChoice(BaseQuestionType):
         node.add("numberofrows", str(len(question.answers)))
         correct_row = next((i for i, a in enumerate(question.answers, 1) if a.correct), 1)
         node.add("correctrow", str(correct_row))
-        for number, answer in enumerate(question.answers, 1):
-            row = node.add("row", number=str(number))
-            add_field(row, "optiontext", answer.text, render)
-            add_field(row, "feedbacktext", answer.feedback, render)
+        write_rows(node, question.answers, render)
 
     def read(
         self,
@@ -56,14 +53,10 @@ class SingleChoice(BaseQuestionType):
         existing: SourceDocument | None = None,
     ) -> ReadResult:
         correct_row = text_of(element, "correctrow")
-        answers = [
-            Answer(
-                read_field(row.find("optiontext"), to_markdown),
-                row.get("number") == correct_row,
-                read_field(row.find("feedbacktext"), to_markdown),
-            )
-            for row in sorted(element.findall("row"), key=lambda r: int(r.get("number", "0")))
-        ]
+        answers = []
+        for number, answer in read_rows(element, to_markdown):
+            answer.correct = number == correct_row
+            answers.append(answer)
         return ReadResult(
             settings={
                 "scoring": text_of(element, "scoringmethod"),

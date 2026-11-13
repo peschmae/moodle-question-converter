@@ -33,7 +33,7 @@ def test_extracts_an_sc_question_from_a_moodle_export(tmp_path: Path) -> None:
         "SW09/sw09-slo-begriffe.md": (
             "---\n"
             "type: sc\n"
-            "id: import-test-sw09-sw09-slo-begriffe\n"
+            "id: sw09-sw09-slo-begriffe\n"
             "---\n\n"
             "# SW09 – SLO-Begriffe\n\n"
             "Was beschreibt ein Error Budget?\n\n"

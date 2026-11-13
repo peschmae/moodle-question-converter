@@ -60,7 +60,7 @@ All settings are optional.
 
 ```yaml
 root_category: 26hs              # all categories go below this one (--root-category overrides it)
-allowed_types: [multichoice, sc, kprime, mtf, ddwtos]   # check rejects other question types
+allowed_types: [multichoice, sc, kprime, mtf, ddwtos, ddimageortext]   # the types your Moodle has
 code_line_height: 1.2            # line height of code blocks in Moodle
 
 defaults:                        # for every question; a question source can override each value
@@ -132,7 +132,7 @@ Exactly one `[x]`. Front matter: `scoring` (`sconezero` | `aprime` | `subpoints`
 
 `[x]` marks correct answers. One `[x]` gives radio buttons, several give checkboxes; `multiple: true` forces checkboxes even with one correct answer, so students can't tell how many are correct.
 
-With checkboxes, the correct answers share 100 % and every wrong answer deducts the same share, so ticking everything scores zero. Override a single answer with `- [x] {50%} …` or `- [ ] {-25%} …`; Moodle only accepts its own list of percentages (100, 90, 83.33333, 80, 75, 70, 66.66667, 60, 50, 40, 33.33333, 30, 25, 20, 16.66667, 14.28571, 12.5, 11.11111, 10, 5, 0), and check reports any other value. Front matter: `multiple`, `numbering` (`abc` | `ABCD` | `123` | `iii` | `IIII` | `none`), `show_instruction`, `feedback`, `show_num_correct`.
+With checkboxes, the correct answers share 100 % and every wrong answer deducts the same share, so ticking everything scores zero. Override a single answer with `- [x] {50%} …` or `- [ ] {-25%} …` (at the start of the answer); the other correct answers share what is left of the 100 %; Moodle only accepts its own list of percentages (100, 90, 83.33333, 80, 75, 70, 66.66667, 60, 50, 40, 33.33333, 30, 25, 20, 16.66667, 14.28571, 12.5, 11.11111, 10, 5, 0), and check reports any other value. Front matter: `multiple`, `numbering` (`abc` | `ABCD` | `123` | `iii` | `IIII` | `none`), `show_instruction`, `feedback`, `show_num_correct`.
 
 ### `kprime` and `mtf` – true/false judgements (ETH)
 
@@ -172,7 +172,7 @@ Ziehen Sie die passenden Begriffe in die Lücken.
 
 ### Raw question sources
 
-Questions of other types (`ddimageortext`, `stack`, `essay`, …) are extracted as raw question sources: `type: raw` and the original `<question>` element in one ```` ```xml ```` block. Generate writes it back unchanged (only the question ID is set). Edit them in Moodle, or carefully in the XML.
+Questions of other types (`ddimageortext`, `stack`, `essay`, …) are extracted as raw question sources: `type: raw` and the original `<question>` element in one ```` ```xml ```` block. Generate writes it back unchanged (only the question ID is set). Edit them in Moodle, or carefully in the XML. `allowed_types` is checked against the question type inside the XML (`ddimageortext`, not `raw`).
 
 ## Commands
 
@@ -183,7 +183,7 @@ Questions of other types (`ddimageortext`, `stack`, `essay`, …) are extracted 
 | `moodle-qc preview PATHS… [-o FILE]` | Writes an HTML page (default `moodle-preview.html`) showing the questions roughly as in Moodle, with correct answers, gaps and solutions. |
 | `moodle-qc extract EXPORT [--into FOLDER]` | Turns a Moodle XML export into question sources inside the collection containing `FOLDER` (default: current folder). |
 
-**Extract** overwrites a question source whose question ID matches, wherever it is, and refuses if that file has uncommitted git changes. New questions get a folder from their category (spaces become `_`) and a question ID from category and name, which is written to their front matter. Moodle HTML becomes Markdown only where converting it back gives the same HTML; anything else stays as raw HTML. Notes, and front matter Moodle can't know (`id`, `name`, `category`, `lang`), are kept.
+**Extract** overwrites a question source whose question ID matches, wherever it is, and refuses if that file (or an image it would replace) has uncommitted git changes. New questions get a folder from their category (spaces become `_`) and a file name from their question name; a question without ID gets the one of that path (category folder + name), written to its front matter. Embedded images are written next to the question source (`image-2.png` if the name is taken by a different image). Extract reads every question source of the collection first to find question IDs, so an unreadable one stops it: fix it, then extract again. Moodle HTML becomes Markdown only where converting it back gives the same HTML; anything else stays as raw HTML. Notes, and front matter Moodle can't know (`id`, `name`, `category`, `lang`), are kept.
 
 ## Importing into Moodle
 

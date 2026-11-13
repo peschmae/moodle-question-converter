@@ -27,12 +27,12 @@ Aus der Prüfung 25HS.
 """
 
 
-def test_parses_front_matter_title_text_answers_solution_and_notes() -> None:
+def test_parses_front_matter_heading_text_answers_solution_and_notes() -> None:
     document = parse_source(SOURCE)
 
     assert document == SourceDocument(
         front_matter={"type": "sc", "points": 2},
-        title="Error Budget",
+        heading="Error Budget",
         text="Was beschreibt ein **Error Budget**?",
         answers=[
             Answer("Das Budget für Monitoring.", False, "Nein, es geht um Zuverlässigkeit."),
@@ -54,10 +54,10 @@ def test_section_headings_inside_code_blocks_are_question_text() -> None:
     assert document.answers is None
 
 
-def test_without_title_the_text_starts_right_away() -> None:
+def test_without_heading_the_text_starts_right_away() -> None:
     document = parse_source("---\ntype: sc\n---\nNur Text.\n")
 
-    assert document.title is None
+    assert document.heading is None
     assert document.text == "Nur Text."
 
 

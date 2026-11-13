@@ -27,7 +27,7 @@ def load_question(collection: Collection, path: Path) -> Question:
     if not qtype:
         raise UserError(f"{origin}: front matter has no question type (type: …).")
     qtype = str(qtype)
-    name = str(front_matter.get("name") or document.title or path.stem)
+    name = str(front_matter.get("name") or document.heading or path.stem)
     question_id = str(front_matter.get("id") or question_id_from_path(relative))
     category = str(
         front_matter.get("category") or category_path(relative.parent, collection.root_category)

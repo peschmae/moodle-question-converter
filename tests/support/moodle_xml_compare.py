@@ -26,10 +26,11 @@ from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+from moodle_qc.moodle_xml import normalize_category
+
 PRESENT = "present"
 """Value of ``expected``/``actual`` for a question or element that only one document has."""
 
-_CONTEXT_PREFIX = re.compile(r"^\$(course|cat|module|system)\$/")
 _PRE_BLOCK = re.compile(r"<pre\b.*?</pre>", re.DOTALL | re.IGNORECASE)
 # NUL can never occur in XML text, so the placeholder can't clash with real content.
 _PRE_PLACEHOLDER = re.compile(r"<\x00(\d+)>")
@@ -145,10 +146,7 @@ def _questions(root: ET.Element, categories: dict[str, str]) -> Iterator[_Questi
 
 
 def _category_path(raw: str) -> str:
-    path = _CONTEXT_PREFIX.sub("", raw.strip())
-    if path == "top":
-        return ""
-    return path.removeprefix("top/")
+    return normalize_category(raw)
 
 
 def _parents(path: str) -> list[str]:
@@ -301,3 +299,21 @@ def select_questions(document: str, *qtypes: str) -> str:
                 pending_category = None
             root.append(element)
     return ET.tostring(root, encoding="unicode")
+
+
+def category_paths(document: str) -> list[str]:
+    """The category entries of a Moodle XML document, normalised, in document order."""
+    return [
+        normalize_category(element.findtext("category/text", default=""))
+        for element in ET.fromstring(document).findall("question")
+        if element.get("type") == "category"
+    ]
+
+
+def question_ids(document: str) -> list[str]:
+    """The question IDs (``<idnumber>``) of the questions in a Moodle XML document."""
+    return [
+        (element.findtext("idnumber") or "").strip()
+        for element in ET.fromstring(document).findall("question")
+        if element.get("type") != "category"
+    ]

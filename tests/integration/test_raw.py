@@ -11,7 +11,7 @@ from tests.support.collections import (
     moodle_fixture,
     sources,
 )
-from tests.support.moodle_xml_compare import assert_moodle_xml_equal
+from tests.support.moodle_xml_compare import assert_moodle_xml_equal, question_ids
 
 
 def test_unsupported_question_type_becomes_a_raw_question_source(tmp_path: Path) -> None:
@@ -35,7 +35,7 @@ def test_raw_question_source_generates_the_original_question(tmp_path: Path) -> 
     generated = generate([collection], tmp_path / "import.xml")
 
     assert_moodle_xml_equal(export, generated, ignore_question_ids=True)
-    assert "<idnumber>zuordnung-metrik-typen</idnumber>" in generated
+    assert question_ids(generated) == ["zuordnung-metrik-typen"]
 
 
 def test_raw_question_source_is_overwritten_in_place(tmp_path: Path) -> None:

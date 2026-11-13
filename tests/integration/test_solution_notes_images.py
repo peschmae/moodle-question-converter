@@ -110,3 +110,21 @@ def test_check_reports_missing_images(collection: Path, capsys: pytest.CaptureFi
         capsys.readouterr().err.splitlines()[0]
         == "sw09/dashboard.md: image dashboard.png not found"
     )
+
+
+def test_different_images_with_the_same_name_are_both_kept(tmp_path: Path) -> None:
+    source = empty_collection(tmp_path / "source")
+    for folder, content in (("a", PNG), ("b", OTHER_PNG)):
+        (source / folder).mkdir()
+        (source / folder / "image.png").write_bytes(content)
+        (source / folder / f"{folder}.md").write_text(
+            f"---\ntype: sc\ncategory: Woche\n---\n# {folder}\n\n![x](image.png)\n\n## Answers\n- [x] a\n- [ ] b\n",
+            encoding="utf-8",
+        )
+    target = empty_collection(tmp_path / "target")
+
+    extract(generate([source], tmp_path / "import.xml"), target, tmp_path)
+
+    assert (target / "Woche" / "image.png").read_bytes() == PNG
+    assert (target / "Woche" / "image-2.png").read_bytes() == OTHER_PNG
+    assert "![x](image-2.png)" in (target / "Woche" / "b.md").read_text(encoding="utf-8")

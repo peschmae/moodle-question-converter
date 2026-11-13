@@ -39,8 +39,3 @@ def slug(text: str) -> str:
 def question_id_from_path(relative_source: PurePosixPath) -> str:
     """Question ID of a question source, from its path relative to the collection root."""
     return slug("-".join(relative_source.with_suffix("").parts))
-
-
-def question_id_from_category(category: str, question_name: str) -> str:
-    """Question ID for an extracted question without one: category + question name."""
-    return slug(f"{category}-{question_name}")

@@ -12,12 +12,10 @@ from pathlib import Path
 from moodle_qc.collection import Collection
 from moodle_qc.markdown import is_external, render
 from moodle_qc.qtypes import RAW, handler_for
-from moodle_qc.qtypes.ddwtos import layout
+from moodle_qc.qtypes.ddwtos import NUMBERED_GAP, layout
 from moodle_qc.qtypes.multichoice import format_fraction, fractions, is_multiple
 from moodle_qc.question import Question
 from moodle_qc.validate import Problem
-
-_NUMBERED_GAP = re.compile(r"\[\[(\d+)\]\]")
 
 _STYLE = """
 body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem;
@@ -135,7 +133,7 @@ def _gap_text(question: Question, render_md: Callable[[str], str]) -> str:
         word = gaps.dragboxes[index].word if 0 <= index < len(gaps.dragboxes) else "?"
         return f'<span class="gap">{html.escape(word)}</span>'
 
-    text = _NUMBERED_GAP.sub(gap, render_md(gaps.text))
+    text = NUMBERED_GAP.sub(gap, render_md(gaps.text))
     correct = {(word, group) for word, group in gaps.gaps}
     lines = []
     for group in gaps.groups:

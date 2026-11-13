@@ -71,7 +71,7 @@ def test_validation_rules() -> None:
         "gap group 'y' has no distractor",
     ]
     assert HANDLER.validate(gap_question("[[a]] [[b]]", distractors=["a", "c"])) == [
-        "the gaps has the word(s) a more than once"
+        "the unnamed gap group has the word(s) a more than once"
     ]
 
 

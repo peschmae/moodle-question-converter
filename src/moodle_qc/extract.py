@@ -15,7 +15,6 @@ from moodle_qc.markdown import image_paths, is_external, plugin_file_name, to_ma
 from moodle_qc.moodle_xml import ExportedQuestion, read_export
 from moodle_qc.naming import (
     folder_for_category,
-    question_id_from_category,
     question_id_from_path,
     slug,
 )
@@ -42,8 +41,9 @@ def extract(collection: Collection, export_text: str, origin: str = "Moodle expo
     existing = _index_by_question_id(collection)
     planned: list[ExtractedSource] = []
     taken: set[Path] = set()
+    planned_images: dict[Path, bytes] = {}
     for exported in read_export(export_text, origin):
-        planned.append(_plan(collection, exported, existing, taken))
+        planned.append(_plan(collection, exported, existing, taken, planned_images))
         taken.add(planned[-1].path)
     overwritten = [p.path for p in planned if p.replaces_existing]
     overwritten += [path for p in planned for path in p.images if path.exists()]
@@ -64,6 +64,7 @@ def _plan(
     exported: ExportedQuestion,
     existing: dict[str, Path],
     taken: set[Path],
+    planned_images: dict[Path, bytes],
 ) -> ExtractedSource:
     element = exported.element
     qtype = element.get("type", "")
@@ -83,19 +84,18 @@ def _plan(
         category = _without_root_category(exported.category, collection.root_category)
         folder = collection.root / folder_for_category(category)
         path = _free_path(folder, slug(name) or "question", taken)
-    images = _Images(path.parent, existing_document)
+    images = _Images(path.parent, existing_document, planned_images)
     document = question_document(collection, handler, element, existing_document, images)
 
     if existing_path is not None:
         return ExtractedSource(path, format_source(document), True, images.to_write)
 
-    derived_id = question_id_from_path(collection.relative(path))
-    if not question_id:
-        # Moodle has no question ID yet: record the new one so the next import carries it.
-        question_id = question_id_from_category(exported.category, name)
-        document.front_matter = {"id": question_id, **document.front_matter}
-    elif question_id != derived_id:
-        document.front_matter = {"id": question_id, **document.front_matter}
+    path_id = question_id_from_path(collection.relative(path))
+    if not question_id or question_id != path_id:
+        # A question without ID gets the one of its new path (category folder + question name),
+        # recorded in the front matter so it survives moving the file; a differing Moodle ID
+        # is kept as is.
+        document.front_matter = {"id": question_id or path_id, **document.front_matter}
     return ExtractedSource(path, format_source(document), False, images.to_write)
 
 
@@ -104,8 +104,12 @@ class _Images:
     question source already references with the same content keeps its path; others are
     written next to the question source."""
 
-    def __init__(self, folder: Path, existing: SourceDocument | None) -> None:
+    def __init__(
+        self, folder: Path, existing: SourceDocument | None, planned: dict[Path, bytes]
+    ) -> None:
         self.folder = folder
+        self.planned = planned
+        """Images planned by every question of this extract, so names never collide."""
         self.to_write: dict[Path, bytes] = {}
         self.known: dict[str, list[str]] = {}
         if existing is not None:
@@ -121,9 +125,22 @@ class _Images:
             file = self.folder / known
             if file.is_file() and file.read_bytes() == content:
                 return known
-        target = self.folder / name
-        self.to_write[target] = content
-        return name
+        stem, suffix = Path(name).stem, Path(name).suffix
+        candidate, number = name, 2
+        while True:
+            target = self.folder / candidate
+            if target in self.planned:
+                if self.planned[target] == content:
+                    return candidate
+            elif target.is_file():
+                if target.read_bytes() == content:
+                    return candidate
+            else:
+                self.planned[target] = content
+                self.to_write[target] = content
+                return candidate
+            candidate = f"{stem}-{number}{suffix}"
+            number += 1
 
 
 def question_document(
@@ -144,7 +161,7 @@ def question_document(
     if isinstance(handler, RawQuestion):
         return SourceDocument(
             front_matter={"type": qtype, **kept},
-            title=existing.title if existing and "name" in kept else text_of(element, "name"),
+            heading=existing.heading if existing and "name" in kept else text_of(element, "name"),
             text=handler.read(element, "", lambda html, files: html).text or "",
             notes=existing.notes if existing else "",
         )
@@ -185,7 +202,7 @@ def question_document(
         front_matter["name"] = name
     return SourceDocument(
         front_matter=front_matter,
-        title=existing.title if keeps_name and existing else name,
+        heading=existing.heading if keeps_name and existing else name,
         text=result.text if result.text is not None else text,
         answers=result.answers,
         solution=read_field(element.find("generalfeedback"), markdown),

@@ -111,3 +111,28 @@ def text_of(element: ET.Element, path: str, default: str = "") -> str:
         return default
     inner = found.find("text")
     return ((inner.text if inner is not None else found.text) or "").strip()
+
+
+def read_rows(element: ET.Element, to_markdown: ToMarkdown) -> list[tuple[str, Answer]]:
+    """The ``<row>`` elements of an ETH question type as (row number, answer), in row order;
+    ``correct`` is left ``False`` for the caller to set."""
+    rows = sorted(element.findall("row"), key=lambda row: int(row.get("number", "0")))
+    return [
+        (
+            row.get("number", ""),
+            Answer(
+                read_field(row.find("optiontext"), to_markdown),
+                False,
+                read_field(row.find("feedbacktext"), to_markdown),
+            ),
+        )
+        for row in rows
+    ]
+
+
+def write_rows(node: Node, answers: list[Answer], render: Render) -> None:
+    """Write answers as the ``<row>`` elements of an ETH question type."""
+    for number, answer in enumerate(answers, 1):
+        row = node.add("row", number=str(number))
+        add_field(row, "optiontext", answer.text, render)
+        add_field(row, "feedbacktext", answer.feedback, render)

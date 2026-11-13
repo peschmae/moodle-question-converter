@@ -30,7 +30,8 @@ from moodle_qc.xmlnode import Node
 UNNAMED = ""
 
 _GAP = re.compile(r"\[\[([^\[\]|]+?)(?:\|([^\[\]|]+?))?\]\]")
-_NUMBERED_GAP = re.compile(r"\[\[(\d+)\]\]")
+NUMBERED_GAP = re.compile(r"\[\[(\d+)\]\]")
+"""A gap in Moodle's notation: ``[[n]]`` with n the number of the dragbox."""
 
 
 @dataclass
@@ -116,7 +117,7 @@ class DragAndDropIntoText(BaseQuestionType):
         reusable = reusable_groups(question.settings.get("reusable"))
         used = {group for _, group in gaps.gaps}
         for group in gaps.groups:
-            label = f"gap group {group!r}" if group else "the gaps"
+            label = f"gap group {group!r}" if group else "the unnamed gap group"
             words = [box.word for box in gaps.dragboxes if box.group == group]
             correct = {word for word, gap_group in gaps.gaps if gap_group == group}
             if group not in used:
@@ -173,7 +174,7 @@ class DragAndDropIntoText(BaseQuestionType):
             name = names[group]
             return f"[[{word}|{name}]]" if name else f"[[{word}]]"
 
-        gap_text = _NUMBERED_GAP.sub(word_gap, text)
+        gap_text = NUMBERED_GAP.sub(word_gap, text)
         distractors: dict[str, list[str]] = {}
         for index, (word, group, _) in enumerate(boxes):
             if index not in used:

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
     tags: ["v*"]
   pull_request:
 
@@ -39,7 +39,7 @@ jobs:
             generate . --output import.xml
           grep -q '<question type="kprime">' /tmp/questions/import.xml
       - name: Publish to GitHub's container registry
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REF_NAME: ${{ github.ref_name }}
