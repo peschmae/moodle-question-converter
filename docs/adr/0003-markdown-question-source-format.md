@@ -1,0 +1,3 @@
+# Question sources are Markdown with YAML front matter
+
+Each question is one Markdown file: settings in YAML front matter, the question text as Markdown body, fixed sections (`## Answers`, `## Solution`, `## Notes`), answers of choice questions as a task list (`- [x] …`) and `ddwtos` gaps written inline with their correct word and gap group (`[[bucket|suffix]]`). We chose this over plain YAML (painful for text with code and formatting), AsciiDoc (matches the module's assignments, but weak tooling outside Ruby/JS) and Moodle's own numbered `[[1]]` gap syntax (numbering has to be kept in sync by hand). The format is hard to change once colleagues have collections written in it, so changes need a migration path via extract.

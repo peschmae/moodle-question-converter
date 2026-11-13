@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- question: 0  -->
+  <question type="category">
+    <category>
+      <text>$course$/top/import-test</text>
+    </category>
+    <info format="moodle_auto_format">
+      <text></text>
+    </info>
+    <idnumber></idnumber>
+  </question>
+
+<!-- question: 0  -->
+  <question type="category">
+    <category>
+      <text>$course$/top/import-test/SW07</text>
+    </category>
+    <info format="moodle_auto_format">
+      <text></text>
+    </info>
+    <idnumber></idnumber>
+  </question>
+
+<!-- question: 8997102  -->
+  <question type="kprime">
+    <name>
+      <text>SW07 – Pull vs. Push</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Beurteilen Sie die folgenden Aussagen.</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <scoringmethod><text>kprime</text>
+</scoringmethod>
+    <shuffleanswers>true</shuffleanswers>
+    <numberofrows>4</numberofrows>
+    <numberofcolumns>2</numberofcolumns>
+    <row number="1">
+      <optiontext format="html">
+        <text><![CDATA[<p>Prometheus scrapt Targets über HTTP.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <row number="2">
+      <optiontext format="html">
+        <text><![CDATA[<p>Exporter pushen standardmässig an Prometheus.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text><![CDATA[<p>Das ist das Pushgateway-Muster, nicht der Standard.</p>]]></text>
+      </feedbacktext>
+    </row>
+    <row number="3">
+      <optiontext format="html">
+        <text><![CDATA[<p>Das Scrape-Intervall ist pro Job konfigurierbar.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <row number="4">
+      <optiontext format="html">
+        <text><![CDATA[<p>Kurzlebige Batch-Jobs lassen sich zuverlässig scrapen.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <column number="1">
+      <responsetext format="moodle_auto_format">
+        <text>richtig</text>
+      </responsetext>
+    </column>
+    <column number="2">
+      <responsetext format="moodle_auto_format">
+        <text>falsch</text>
+      </responsetext>
+    </column>
+    <weight rownumber="1" columnnumber="1">
+      <value>
+         1.000
+      </value>
+    </weight>
+    <weight rownumber="1" columnnumber="2">
+      <value>
+         0.000
+      </value>
+    </weight>
+    <weight rownumber="2" columnnumber="1">
+      <value>
+         0.000
+      </value>
+    </weight>
+    <weight rownumber="2" columnnumber="2">
+      <value>
+         1.000
+      </value>
+    </weight>
+    <weight rownumber="3" columnnumber="1">
+      <value>
+         1.000
+      </value>
+    </weight>
+    <weight rownumber="3" columnnumber="2">
+      <value>
+         0.000
+      </value>
+    </weight>
+    <weight rownumber="4" columnnumber="1">
+      <value>
+         0.000
+      </value>
+    </weight>
+    <weight rownumber="4" columnnumber="2">
+      <value>
+         1.000
+      </value>
+    </weight>
+    <tags>
+      <tag><text>26hs</text>
+</tag>
+    </tags>
+  </question>
+
+<!-- question: 8997101  -->
+  <question type="multichoice">
+    <name>
+      <text>SW07 – Prometheus Datenmodell</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche Aussagen zu Prometheus-Metriken sind korrekt?</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <showstandardinstruction>0</showstandardinstruction>
+    <correctfeedback format="html">
+      <text><![CDATA[<p>Die Antwort ist richtig.</p>]]></text>
+    </correctfeedback>
+    <partiallycorrectfeedback format="html">
+      <text><![CDATA[<p>Die Antwort ist teilweise richtig.</p>]]></text>
+    </partiallycorrectfeedback>
+    <incorrectfeedback format="html">
+      <text><![CDATA[<p>Die Antwort ist falsch.</p>]]></text>
+    </incorrectfeedback>
+    <shownumcorrect/>
+    <answer fraction="50" format="html">
+      <text><![CDATA[<p>Eine Zeitreihe wird durch Metrikname und Labels identifiziert.</p>]]></text>
+      <feedback format="html">
+        <text></text>
+      </feedback>
+    </answer>
+    <answer fraction="50" format="html">
+      <text><![CDATA[<p>Ein Counter kann nur steigen (oder auf 0 zurückgesetzt werden).</p>]]></text>
+      <feedback format="html">
+        <text></text>
+      </feedback>
+    </answer>
+    <answer fraction="-50" format="html">
+      <text><![CDATA[<p>Ein Gauge eignet sich nicht für Werte, die sinken können.</p>]]></text>
+      <feedback format="html">
+        <text><![CDATA[<p>Genau dafür ist ein Gauge da.</p>]]></text>
+      </feedback>
+    </answer>
+    <tags>
+      <tag><text>26hs</text>
+</tag>
+    </tags>
+  </question>
+
+<!-- question: 0  -->
+  <question type="category">
+    <category>
+      <text>$course$/top/import-test/SW08</text>
+    </category>
+    <info format="moodle_auto_format">
+      <text></text>
+    </info>
+    <idnumber></idnumber>
+  </question>
+
+<!-- question: 8997100  -->
+  <question type="mtf">
+    <name>
+      <text>SW08 – OpenTelemetry Collector</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Beurteilen Sie die Aussagen zum OpenTelemetry Collector.</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <scoringmethod><text>subpoints</text>
+</scoringmethod>
+    <shuffleanswers>true</shuffleanswers>
+    <numberofrows>3</numberofrows>
+    <numberofcolumns>2</numberofcolumns>
+    <answernumbering>none</answernumbering>
+    <deduction>0</deduction>
+    <row number="1">
+      <optiontext format="html">
+        <text><![CDATA[<p>Receiver nehmen Telemetriedaten entgegen.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <row number="2">
+      <optiontext format="html">
+        <text><![CDATA[<p>Processor senden Daten an das Backend.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text><![CDATA[<p>Das machen Exporter.</p>]]></text>
+      </feedbacktext>
+    </row>
+    <row number="3">
+      <optiontext format="html">
+        <text><![CDATA[<p>Eine Pipeline verbindet Receiver, Processor und Exporter.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <column number="1">
+      <responsetext format="moodle_auto_format">
+        <text>richtig</text>
+      </responsetext>
+    </column>
+    <column number="2">
+      <responsetext format="moodle_auto_format">
+        <text>falsch</text>
+      </responsetext>
+    </column>
+    <weight rownumber="1" columnnumber="1">
+      <value>
+         1.000
+      </value>
+    </weight>
+    <weight rownumber="1" columnnumber="2">
+      <value>
+         0.000
+      </value>
+    </weight>
+    <weight rownumber="2" columnnumber="1">
+      <value>
+         0.000
+      </value>
+    </weight>
+    <weight rownumber="2" columnnumber="2">
+      <value>
+         1.000
+      </value>
+    </weight>
+    <weight rownumber="3" columnnumber="1">
+      <value>
+         1.000
+      </value>
+    </weight>
+    <weight rownumber="3" columnnumber="2">
+      <value>
+         0.000
+      </value>
+    </weight>
+    <tags>
+      <tag><text>26hs</text>
+</tag>
+    </tags>
+  </question>
+
+<!-- question: 0  -->
+  <question type="category">
+    <category>
+      <text>$course$/top/import-test/SW09</text>
+    </category>
+    <info format="moodle_auto_format">
+      <text></text>
+    </info>
+    <idnumber></idnumber>
+  </question>
+
+<!-- question: 8997103  -->
+  <question type="sc">
+    <name>
+      <text>SW09 – SLO-Begriffe</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Was beschreibt ein Error Budget?</p>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1.0000000</defaultgrade>
+    <penalty>0.3333333</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <scoringmethod><text>sconezero</text>
+</scoringmethod>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering><text>none</text>
+</answernumbering>
+    <numberofrows>3</numberofrows>
+    <correctrow>2</correctrow>
+    <row number="1">
+      <optiontext format="html">
+        <text><![CDATA[<p>Das Budget für Monitoring-Infrastruktur.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <row number="2">
+      <optiontext format="html">
+        <text><![CDATA[<p>Die erlaubte Unzuverlässigkeit gemäss SLO (1 − SLO).</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <row number="3">
+      <optiontext format="html">
+        <text><![CDATA[<p>Die maximale Anzahl Alerts pro Woche.</p>]]></text>
+      </optiontext>
+      <feedbacktext format="html">
+        <text></text>
+      </feedbacktext>
+    </row>
+    <tags>
+      <tag><text>26hs</text>
+</tag>
+    </tags>
+  </question>
+
+</quiz>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+
+  <question type="category">
+    <category><text>$course$/top/alerting</text></category>
+    <info format="html"><text></text></info>
+  </question>
+
+  <question type="ddwtos">
+    <name><text>G1 · Recording Rule und Fast-Burn-Alert (SW09)</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Das Verfügbarkeits-SLO des Chatbots lautet: 99 % der Nachrichten werden über 30 Tage ohne Fehler beantwortet. Vervollständigen Sie die Recording Rule für die 30-Minuten-Fehlerquote pro Service und den Fast-Burn-Alert, der aufbietet, wenn das Budget 14,4-mal zu schnell verbraucht wird. Die 5-Minuten-Recording-Rule existiert bereits.</p><pre style="font-family: monospace; line-height: 2.2;">groups:
+  - name: chatbots-slo
+    rules:
+      - [[1]]: service:chatbot_messages_errors:ratio_rate30m
+        expr: |
+            sum by ([[2]]) ([[3]](chatbot_messages_total{status="error"}[30m]))
+          / sum by (service) (rate(chatbot_messages_total[30m]))
+
+      - [[4]]: ChatbotErrorBudgetFastBurn
+        expr: |
+              service:chatbot_messages_errors:ratio_rate30m &gt; (14.4 * [[5]])
+          [[6]] service:chatbot_messages_errors:ratio_rate5m  &gt; (14.4 * 0.01)
+        [[7]]: 2m
+        labels:
+          severity: [[8]]</pre><p>Ziehen Sie die passenden Begriffe in die Lücken. Nicht alle Begriffe werden gebraucht.</p>]]></text></questiontext>
+    <generalfeedback format="html"><text><![CDATA[<p>Lösung: <code>record</code>, <code>service</code>, <code>rate</code>, <code>alert</code>, <code>0.01</code>, <code>and</code>, <code>for</code>, <code>critical</code>.</p><p>Die Schwelle ist Burn Rate × (1 − SLO) = 14,4 × 0,01. Beide Fenster müssen gleichzeitig überschritten sein (<code>and</code>): das lange für die Signifikanz, das kurze, damit der Alert nach dem Fix schnell auflöst. <code>irate</code> gehört nicht in Regeln, und alarmiert wird auf den Service, nicht auf den Pod.</p>]]></text></generalfeedback>
+    <defaultgrade>4</defaultgrade>
+    <penalty>0</penalty>
+    <hidden>0</hidden>
+    <shuffleanswers>1</shuffleanswers>
+    <correctfeedback format="html"><text></text></correctfeedback>
+    <partiallycorrectfeedback format="html"><text></text></partiallycorrectfeedback>
+    <incorrectfeedback format="html"><text></text></incorrectfeedback>
+    <shownumcorrect/>
+    <dragbox>
+      <text>record</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>service</text>
+      <group>3</group>
+    </dragbox>
+    <dragbox>
+      <text>rate</text>
+      <group>2</group>
+    </dragbox>
+    <dragbox>
+      <text>alert</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>0.01</text>
+      <group>4</group>
+    </dragbox>
+    <dragbox>
+      <text>and</text>
+      <group>5</group>
+    </dragbox>
+    <dragbox>
+      <text>for</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>critical</text>
+      <group>6</group>
+    </dragbox>
+    <dragbox>
+      <text>expr</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>keep_firing_for</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>irate</text>
+      <group>2</group>
+    </dragbox>
+    <dragbox>
+      <text>deriv</text>
+      <group>2</group>
+    </dragbox>
+    <dragbox>
+      <text>pod</text>
+      <group>3</group>
+    </dragbox>
+    <dragbox>
+      <text>le</text>
+      <group>3</group>
+    </dragbox>
+    <dragbox>
+      <text>0.99</text>
+      <group>4</group>
+    </dragbox>
+    <dragbox>
+      <text>0.144</text>
+      <group>4</group>
+    </dragbox>
+    <dragbox>
+      <text>or</text>
+      <group>5</group>
+    </dragbox>
+    <dragbox>
+      <text>unless</text>
+      <group>5</group>
+    </dragbox>
+    <dragbox>
+      <text>warning</text>
+      <group>6</group>
+    </dragbox>
+  </question>
+
+  <question type="ddwtos">
+    <name><text>G2 · Latenz-SLI und fehlendes Target (SW09)</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Latenz-SLO: 95 % der Antworten innerhalb von 5 s. Der Python-Client schreibt die Bucket-Grenzen als <code>0.5</code>, <code>1.0</code>, <code>5.0</code>, <code>10.0</code>. Vervollständigen Sie die Recording Rule für den Anteil langsamer Antworten und die Regel, die feuert, wenn Prometheus kein gesundes Target für den LLM-Bot hat, egal ob das Target down oder ganz verschwunden ist.</p><pre style="font-family: monospace; line-height: 2.2;">- record: service:chatbot_reply_slow:ratio_rate5m
+  expr: |
+    1 - (
+        sum by (service) (rate(chatbot_reply_duration_seconds_[[1]]{le="[[2]]"}[5m]))
+      / sum by (service) (rate(chatbot_reply_duration_seconds_[[3]][5m]))
+    )
+
+- alert: ChatbotTargetMissing
+  expr: [[4]](up{namespace="chatbots", service="chatbots-alan-llm"} [[5]])
+  for: 2m
+  labels:
+    severity: critical
+    service: chatbots-alan-llm</pre><p>Ziehen Sie die passenden Begriffe in die Lücken. Nicht alle Begriffe werden gebraucht.</p>]]></text></questiontext>
+    <generalfeedback format="html"><text><![CDATA[<p>Lösung: <code>bucket</code>, <code>5.0</code>, <code>count</code>, <code>absent</code>, <code>== 1</code>.</p><p><code>le</code> muss exakt so geschrieben sein, wie der Client es exportiert: <code>le="5"</code> trifft keine Serie, und die Regel bleibt still. Ein Target, das down ist, hat weiterhin <code>up = 0</code>; erst <code>== 1</code> sorgt dafür, dass «down» und «verschwunden» beide als fehlend gelten.</p>]]></text></generalfeedback>
+    <defaultgrade>4</defaultgrade>
+    <penalty>0</penalty>
+    <hidden>0</hidden>
+    <shuffleanswers>1</shuffleanswers>
+    <correctfeedback format="html"><text></text></correctfeedback>
+    <partiallycorrectfeedback format="html"><text></text></partiallycorrectfeedback>
+    <incorrectfeedback format="html"><text></text></incorrectfeedback>
+    <shownumcorrect/>
+    <dragbox>
+      <text>bucket</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>5.0</text>
+      <group>2</group>
+    </dragbox>
+    <dragbox>
+      <text>count</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>absent</text>
+      <group>3</group>
+    </dragbox>
+    <dragbox>
+      <text>== 1</text>
+      <group>4</group>
+    </dragbox>
+    <dragbox>
+      <text>sum</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>total</text>
+      <group>1</group>
+    </dragbox>
+    <dragbox>
+      <text>5</text>
+      <group>2</group>
+    </dragbox>
+    <dragbox>
+      <text>5000</text>
+      <group>2</group>
+    </dragbox>
+    <dragbox>
+      <text>absent_over_time</text>
+      <group>3</group>
+    </dragbox>
+    <dragbox>
+      <text>count</text>
+      <group>3</group>
+    </dragbox>
+    <dragbox>
+      <text>== 0</text>
+      <group>4</group>
+    </dragbox>
+    <dragbox>
+      <text>&gt; 1</text>
+      <group>4</group>
+    </dragbox>
+  </question>
+
+</quiz>
