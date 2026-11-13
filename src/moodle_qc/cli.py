@@ -35,6 +35,12 @@ def _build_parser() -> argparse.ArgumentParser:
     check = subcommands.add_parser("check", help="validate question sources, write nothing")
     check.add_argument("paths", nargs="+", type=Path, help="question sources or folders")
 
+    preview = subcommands.add_parser("preview", help="render question sources as an HTML page")
+    preview.add_argument("paths", nargs="+", type=Path, help="question sources or folders")
+    preview.add_argument(
+        "-o", "--output", type=Path, default=Path("moodle-preview.html"), help="HTML file to write"
+    )
+
     extract = subcommands.add_parser(
         "extract", help="turn a Moodle XML export into question sources"
     )
@@ -63,6 +69,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return commands.generate(args.paths, args.output, args.root_category)
         if args.command == "check":
             return commands.check(args.paths)
+        if args.command == "preview":
+            return commands.preview(args.paths, args.output)
         if args.command == "extract":
             return commands.extract(args.export, args.into)
     except UserError as error:

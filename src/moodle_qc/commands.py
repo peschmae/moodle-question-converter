@@ -9,6 +9,7 @@ from pathlib import Path
 from moodle_qc.collection import Collection
 from moodle_qc.convert import import_file
 from moodle_qc.extract import extract as extract_sources
+from moodle_qc.preview import preview_page
 from moodle_qc.validate import Problem, validate
 
 
@@ -55,4 +56,16 @@ def extract(export: Path, into: Path) -> int:
     for path in written:
         print(f"Wrote {collection.relative(path)}")
     print(f"Extracted {len(written)} question(s) into {collection.root}")
+    return 0
+
+
+def preview(paths: Sequence[Path], output: Path) -> int:
+    """Write an HTML page showing the selected questions; problems are listed on the page too."""
+    collection = open_collection(paths)
+    result = validate(collection, paths)
+    output.write_text(preview_page(collection, result.questions, result.problems), encoding="utf-8")
+    print(f"Wrote a preview of {len(result.questions)} question(s) to {output}")
+    if result.problems:
+        _report(result.problems)
+        return 1
     return 0
