@@ -1,4 +1,4 @@
-from moodle_qc.markdown import code_style, render
+from moodle_qc.markdown import code_style, render, same_html, to_markdown
 
 PRE = code_style(1.2)
 
@@ -46,3 +46,54 @@ def test_lists_and_headings() -> None:
 
 def test_gap_markers_stay_untouched() -> None:
     assert render("sum by ([[2]]) ([[3]](x))", pre_style=PRE) == "<p>sum by ([[2]]) ([[3]](x))</p>"
+
+
+EXPORT_TEXT = (
+    "<p>Der Client schreibt <code>0.5</code> und <code>5.0</code>.</p>\n"
+    '<pre style="font-family: monospace; line-height: 1.2;">- record: x\n  expr: |\n'
+    "    a &gt; [[1]]\n\n- alert: Y</pre>\n"
+    "<p>Ziehen Sie die Begriffe in die Lücken.</p>"
+)
+
+
+def test_moodle_html_becomes_markdown() -> None:
+    assert to_markdown(EXPORT_TEXT, pre_style=PRE) == (
+        "Der Client schreibt `0.5` und `5.0`.\n\n"
+        "```\n- record: x\n  expr: |\n    a > [[1]]\n\n- alert: Y\n```\n\n"
+        "Ziehen Sie die Begriffe in die Lücken."
+    )
+
+
+def test_markdown_from_html_renders_back_to_the_same_html() -> None:
+    assert same_html(render(to_markdown(EXPORT_TEXT, pre_style=PRE), pre_style=PRE), EXPORT_TEXT)
+
+
+def test_code_block_with_another_style_stays_raw_html() -> None:
+    html = '<pre style="font-family: monospace; line-height: 2.2;">a\n\nb</pre>'
+
+    assert to_markdown(html, pre_style=PRE) == f"```{{=html}}\n{html}\n```"
+
+
+def test_unsupported_inline_html_keeps_the_block_as_raw_html() -> None:
+    html = '<p>Text mit <span style="color: red">Farbe</span></p>\n<p>Normal</p>'
+
+    assert to_markdown(html, pre_style=PRE) == (
+        '<p>Text mit <span style="color: red">Farbe</span></p>\n\nNormal'
+    )
+
+
+def test_text_that_would_render_differently_stays_raw_html() -> None:
+    html = "<p>- kein Listenpunkt</p>"
+
+    assert to_markdown(html, pre_style=PRE) == html
+
+
+def test_lists_headings_links_and_emphasis() -> None:
+    html = (
+        '<h3>Teil A</h3><ul><li><strong>eins</strong></li><li><a href="https://x.ch">zwei</a></li>'
+        "</ul><ol><li><em>a</em></li></ol>"
+    )
+
+    assert to_markdown(html, pre_style=PRE) == (
+        "### Teil A\n\n- **eins**\n- [zwei](https://x.ch)\n\n1. *a*"
+    )

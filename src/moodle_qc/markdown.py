@@ -17,6 +17,8 @@ from __future__ import annotations
 import html
 import re
 from collections.abc import Callable
+from dataclasses import dataclass, field
+from html.parser import HTMLParser
 
 RAW_HTML_INFO = "{=html}"
 
@@ -145,3 +147,225 @@ def _escape_text(text: str) -> str:
     text = _ENTITY.sub("\0", text).replace("&", "&amp;").replace("\0", "&")
     parts = _TAG_START.split(text)
     return "<".join(part.replace("<", "&lt;") for part in parts)
+
+
+# --- HTML → Markdown -------------------------------------------------------------------------
+
+ImagePath = Callable[[str], str]
+"""Maps an image ``src`` from HTML to the path written into the Markdown."""
+
+_VOID = frozenset(
+    {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "wbr"}
+)
+_PLUGINFILE = "@@PLUGINFILE@@/"
+
+
+@dataclass
+class _Element:
+    tag: str
+    attrs: dict[str, str]
+    children: list[_Element | str] = field(default_factory=list)
+
+
+class _TreeBuilder(HTMLParser):
+    """Builds a small tree and remembers where each top-level node starts and ends."""
+
+    def __init__(self, source: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.root = _Element("", {})
+        self.stack = [self.root]
+        self.top_level: list[tuple[int, int]] = []
+        self._line_starts = [0]
+        for index, char in enumerate(source):
+            if char == "\n":
+                self._line_starts.append(index + 1)
+        self._source = source
+        self._top_start: int | None = None
+
+    def _offset(self) -> int:
+        line, column = self.getpos()
+        return self._line_starts[line - 1] + column
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        start = self._offset()
+        element = _Element(tag, {name: value or "" for name, value in attrs})
+        self.stack[-1].children.append(element)
+        if len(self.stack) == 1:
+            self._top_start = start
+        if tag in _VOID:
+            if len(self.stack) == 1:
+                end = self._source.index(">", start) + 1
+                self.top_level.append((start, end))
+        else:
+            self.stack.append(element)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        start = self._offset()
+        self.stack[-1].children.append(_Element(tag, {n: v or "" for n, v in attrs}))
+        if len(self.stack) == 1:
+            self.top_level.append((start, self._source.index(">", start) + 1))
+
+    def handle_endtag(self, tag: str) -> None:
+        if len(self.stack) > 1 and self.stack[-1].tag == tag:
+            self.stack.pop()
+            if len(self.stack) == 1 and self._top_start is not None:
+                end = self._source.index(">", self._offset()) + 1
+                self.top_level.append((self._top_start, end))
+                self._top_start = None
+
+    def handle_data(self, data: str) -> None:
+        self.stack[-1].children.append(data)
+        if len(self.stack) == 1 and data.strip():
+            start = self._offset()
+            end = self._source.find("<", start)
+            self.top_level.append((start, end if end >= 0 else len(self._source)))
+
+
+def to_markdown(html_text: str, *, pre_style: str, image_path: ImagePath = str) -> str:
+    """Convert HTML to the Markdown subset where rendering it back gives the same HTML;
+    everything else is kept as raw HTML."""
+    builder = _TreeBuilder(html_text)
+    builder.feed(html_text)
+    builder.close()
+    if len(builder.stack) != 1:
+        return _raw(html_text.strip())
+    blocks = [html_text[start:end] for start, end in builder.top_level]
+    return "\n\n".join(_block_to_markdown(block, pre_style, image_path) for block in blocks)
+
+
+def same_html(first: str, second: str) -> bool:
+    """Whether two HTML fragments have the same tags, attributes and (decoded) text."""
+    return _tokens(first) == _tokens(second)
+
+
+def _block_to_markdown(block: str, pre_style: str, image_path: ImagePath) -> str:
+    builder = _TreeBuilder(block)
+    builder.feed(block)
+    builder.close()
+    nodes = builder.root.children
+    sources: dict[str, str] = {}
+
+    def to_path(src: str) -> str:
+        path = image_path(src)
+        sources[path] = src
+        return path
+
+    candidate: str | None = None
+    if len(nodes) == 1 and isinstance(nodes[0], _Element):
+        candidate = _element_to_markdown(nodes[0], pre_style, to_path)
+    if candidate is not None:
+        rendered = render(candidate, pre_style=pre_style, image_src=lambda p: sources.get(p, p))
+        if same_html(rendered, block):
+            return candidate
+    return _raw(block)
+
+
+def _raw(block: str) -> str:
+    plain = block.startswith("<") and "\n\n" not in block and "\n```" not in block
+    return block if plain else f"```{RAW_HTML_INFO}\n{block}\n```"
+
+
+def _element_to_markdown(element: _Element, pre_style: str, image_path: ImagePath) -> str | None:
+    tag = element.tag
+    if tag == "p":
+        return _inline(element.children, image_path)
+    if tag == "pre" and element.attrs.get("style") == pre_style:
+        if any(isinstance(child, _Element) for child in element.children):
+            return None
+        css_class = element.attrs.get("class", "")
+        info = css_class.removeprefix("language-") if css_class.startswith("language-") else ""
+        if set(element.attrs) - {"style", "class"} or (css_class and not info):
+            return None
+        return f"```{info}\n{''.join(str(c) for c in element.children)}\n```"
+    if tag in {"h1", "h2", "h3", "h4", "h5", "h6"} and not element.attrs:
+        text = _inline(element.children, image_path)
+        return None if text is None else f"{'#' * int(tag[1])} {text}"
+    if tag in {"ul", "ol"} and not element.attrs:
+        items: list[str] = []
+        for number, child in enumerate(element.children, 1):
+            if not isinstance(child, _Element) or child.tag != "li" or child.attrs:
+                return None
+            text = _inline(child.children, image_path)
+            if text is None:
+                return None
+            marker = "-" if tag == "ul" else f"{number}."
+            items.append(f"{marker} {text.replace(chr(10), chr(10) + '  ')}")
+        return "\n".join(items)
+    return None
+
+
+def _inline(children: list[_Element | str], image_path: ImagePath) -> str | None:
+    out: list[str] = []
+    for child in children:
+        if isinstance(child, str):
+            out.append(child)
+            continue
+        if (
+            child.tag == "code"
+            and not child.attrs
+            and _only_text(child)
+            and "`" not in _text(child)
+        ):
+            out.append(f"`{_text(child)}`")
+        elif child.tag in {"strong", "em"} and not child.attrs:
+            inner = _inline(child.children, image_path)
+            if inner is None:
+                return None
+            mark = "**" if child.tag == "strong" else "*"
+            out.append(f"{mark}{inner}{mark}")
+        elif child.tag == "a" and set(child.attrs) == {"href"}:
+            inner = _inline(child.children, image_path)
+            if inner is None:
+                return None
+            out.append(f"[{inner}]({child.attrs['href']})")
+        elif child.tag == "img" and set(child.attrs) <= {"src", "alt"} and "src" in child.attrs:
+            out.append(f"![{child.attrs.get('alt', '')}]({image_path(child.attrs['src'])})")
+        else:
+            return None
+    return "".join(out)
+
+
+def _only_text(element: _Element) -> bool:
+    return all(isinstance(child, str) for child in element.children)
+
+
+def _text(element: _Element) -> str:
+    return "".join(child for child in element.children if isinstance(child, str))
+
+
+class _Tokenizer(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tokens: list[tuple[str, ...]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        flat = tuple(f"{name}={value or ''}" for name, value in sorted(attrs))
+        self.tokens.append(("start", tag, *flat))
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+
+    def handle_endtag(self, tag: str) -> None:
+        self.tokens.append(("end", tag))
+
+    def handle_data(self, data: str) -> None:
+        if self.tokens and self.tokens[-1][0] == "text":
+            self.tokens[-1] = ("text", self.tokens[-1][1] + data)
+        else:
+            self.tokens.append(("text", data))
+
+
+def _tokens(fragment: str) -> list[tuple[str, ...]]:
+    tokenizer = _Tokenizer()
+    tokenizer.feed(fragment)
+    tokenizer.close()
+    return tokenizer.tokens
+
+
+def plugin_file_name(src: str) -> str | None:
+    """The file name of a ``@@PLUGINFILE@@/…`` reference, else ``None``."""
+    return src[len(_PLUGINFILE) :] if src.startswith(_PLUGINFILE) else None
+
+
+def plugin_file_src(name: str) -> str:
+    return _PLUGINFILE + name
