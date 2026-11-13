@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import subprocess
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from moodle_qc.collection import Collection
 from moodle_qc.convert import load_question
 from moodle_qc.errors import UserError
-from moodle_qc.markdown import to_markdown
+from moodle_qc.markdown import image_paths, is_external, plugin_file_name, to_markdown
 from moodle_qc.moodle_xml import ExportedQuestion, read_export
 from moodle_qc.naming import (
     folder_for_category,
@@ -33,6 +33,8 @@ class ExtractedSource:
     path: Path
     content: str
     replaces_existing: bool
+    images: dict[Path, bytes] = field(default_factory=dict)
+    """Image files to write next to the question source."""
 
 
 def extract(collection: Collection, export_text: str, origin: str = "Moodle export") -> list[Path]:
@@ -43,13 +45,17 @@ def extract(collection: Collection, export_text: str, origin: str = "Moodle expo
     for exported in read_export(export_text, origin):
         planned.append(_plan(collection, exported, existing, taken))
         taken.add(planned[-1].path)
-    dirty = [p for p in planned if p.replaces_existing and _uncommitted(collection.root, p.path)]
+    overwritten = [p.path for p in planned if p.replaces_existing]
+    overwritten += [path for p in planned for path in p.images if path.exists()]
+    dirty = [path for path in overwritten if _uncommitted(collection.root, path)]
     if dirty:
-        names = ", ".join(collection.relative(p.path).as_posix() for p in dirty)
-        raise UserError(f"Not overwriting question sources with uncommitted changes: {names}.")
+        names = ", ".join(collection.relative(path).as_posix() for path in dirty)
+        raise UserError(f"Not overwriting files with uncommitted changes: {names}.")
     for source in planned:
         source.path.parent.mkdir(parents=True, exist_ok=True)
         source.path.write_text(source.content, encoding="utf-8")
+        for image_path, content in source.images.items():
+            image_path.write_bytes(content)
     return [source.path for source in planned]
 
 
@@ -71,14 +77,18 @@ def _plan(
         if existing_path
         else None
     )
-    document = question_document(collection, handler, element, existing_document)
+    if existing_path is not None:
+        path = existing_path
+    else:
+        category = _without_root_category(exported.category, collection.root_category)
+        folder = collection.root / folder_for_category(category)
+        path = _free_path(folder, slug(name) or "question", taken)
+    images = _Images(path.parent, existing_document)
+    document = question_document(collection, handler, element, existing_document, images)
 
     if existing_path is not None:
-        return ExtractedSource(existing_path, format_source(document), replaces_existing=True)
+        return ExtractedSource(path, format_source(document), True, images.to_write)
 
-    category = _without_root_category(exported.category, collection.root_category)
-    folder = collection.root / folder_for_category(category)
-    path = _free_path(folder, slug(name) or "question", taken)
     derived_id = question_id_from_path(collection.relative(path))
     if not question_id:
         # Moodle has no question ID yet: record the new one so the next import carries it.
@@ -86,7 +96,34 @@ def _plan(
         document.front_matter = {"id": question_id, **document.front_matter}
     elif question_id != derived_id:
         document.front_matter = {"id": question_id, **document.front_matter}
-    return ExtractedSource(path, format_source(document), replaces_existing=False)
+    return ExtractedSource(path, format_source(document), False, images.to_write)
+
+
+class _Images:
+    """Decides where the embedded images of an extracted question go: an image the existing
+    question source already references with the same content keeps its path; others are
+    written next to the question source."""
+
+    def __init__(self, folder: Path, existing: SourceDocument | None) -> None:
+        self.folder = folder
+        self.to_write: dict[Path, bytes] = {}
+        self.known: dict[str, list[str]] = {}
+        if existing is not None:
+            texts = [existing.text, existing.solution]
+            texts += [t for a in existing.answers or [] for t in (a.text, a.feedback)]
+            for text in texts:
+                for path in image_paths(text):
+                    if not is_external(path):
+                        self.known.setdefault(Path(path).name, []).append(path)
+
+    def path_for(self, name: str, content: bytes) -> str:
+        for known in self.known.get(name, []):
+            file = self.folder / known
+            if file.is_file() and file.read_bytes() == content:
+                return known
+        target = self.folder / name
+        self.to_write[target] = content
+        return name
 
 
 def question_document(
@@ -94,6 +131,7 @@ def question_document(
     handler: QuestionType,
     element: ET.Element,
     existing: SourceDocument | None = None,
+    images: _Images | None = None,
 ) -> SourceDocument:
     """The question source for one exported question, keeping what only the existing source
     knows (notes, explicit name/ID/category/lang)."""
@@ -112,7 +150,13 @@ def question_document(
         )
 
     def markdown(html: str, files: dict[str, bytes]) -> str:
-        return to_markdown(html, pre_style=collection.pre_style)
+        def image_path(src: str) -> str:
+            name = plugin_file_name(src)
+            if name is None or name not in files or images is None:
+                return src
+            return images.path_for(name, files[name])
+
+        return to_markdown(html, pre_style=collection.pre_style, image_path=image_path)
 
     text = read_field(element.find("questiontext"), markdown)
     settings: dict[str, Any] = {

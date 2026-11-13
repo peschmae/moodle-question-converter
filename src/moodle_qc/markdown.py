@@ -19,6 +19,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
+from urllib.parse import quote, unquote
 
 RAW_HTML_INFO = "{=html}"
 
@@ -364,8 +365,17 @@ def _tokens(fragment: str) -> list[tuple[str, ...]]:
 
 def plugin_file_name(src: str) -> str | None:
     """The file name of a ``@@PLUGINFILE@@/…`` reference, else ``None``."""
-    return src[len(_PLUGINFILE) :] if src.startswith(_PLUGINFILE) else None
+    return unquote(src[len(_PLUGINFILE) :]) if src.startswith(_PLUGINFILE) else None
 
 
 def plugin_file_src(name: str) -> str:
-    return _PLUGINFILE + name
+    return _PLUGINFILE + quote(name)
+
+
+def image_paths(markdown: str) -> list[str]:
+    """Paths of the Markdown images (``![alt](path)``) in a text."""
+    return [match.group("src") for match in _INLINE.finditer(markdown) if match.group("image")]
+
+
+def is_external(src: str) -> bool:
+    return bool(re.match(r"^[a-z][a-z0-9+.-]*:", src, re.IGNORECASE))

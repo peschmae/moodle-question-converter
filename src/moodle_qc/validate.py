@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from moodle_qc.collection import Collection
-from moodle_qc.convert import load_question
+from moodle_qc.convert import load_question, question_node
 from moodle_qc.errors import UserError
 from moodle_qc.qtypes import RAW, handler_for
 from moodle_qc.question import COMMON_FRONT_MATTER, Question
@@ -91,4 +91,10 @@ def _question_problems(collection: Collection, question: Question) -> list[str]:
         problems.append("penalty must be a number between 0 and 1")
     if handler.has_answers and question.document.answers is None:
         return problems
-    return problems + handler.validate(question)
+    problems += handler.validate(question)
+    if not problems:
+        try:
+            question_node(question, collection)
+        except UserError as error:
+            problems.append(str(error).removeprefix(f"{question.origin}: ").rstrip("."))
+    return problems

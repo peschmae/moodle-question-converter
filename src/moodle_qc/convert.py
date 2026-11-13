@@ -7,12 +7,12 @@ from pathlib import Path
 
 from moodle_qc.collection import Collection
 from moodle_qc.errors import UserError
-from moodle_qc.markdown import render
+from moodle_qc.markdown import is_external, plugin_file_src, render
 from moodle_qc.naming import category_path, question_id_from_path
 from moodle_qc.qtypes import handler_for
 from moodle_qc.qtypes.base import QuestionType, add_field, flag
 from moodle_qc.qtypes.raw import RawQuestion
-from moodle_qc.question import Question, RenderedText
+from moodle_qc.question import EmbeddedFile, Question, RenderedText
 from moodle_qc.source import parse_source
 from moodle_qc.xmlnode import Node, serialize
 
@@ -59,7 +59,13 @@ def question_node(question: Question, collection: Collection) -> Node:
     settings = question.settings
 
     def render_field(markdown: str) -> RenderedText:
-        return RenderedText(render(markdown, pre_style=collection.pre_style))
+        files: list[EmbeddedFile] = []
+        html = render(
+            markdown,
+            pre_style=collection.pre_style,
+            image_src=lambda path: _embed(question, path, files),
+        )
+        return RenderedText(html, files)
 
     node = Node("question", {"type": question.qtype})
     node.add_text("name", question.name)
@@ -109,3 +115,22 @@ def _number(value: object) -> str:
     if isinstance(value, int | float):
         return f"{float(value):.7f}".rstrip("0").rstrip(".")
     return str(value)
+
+
+def _embed(question: Question, path: str, files: list[EmbeddedFile]) -> str:
+    """Embed the image at ``path`` (relative to the question source) in the current field."""
+    if is_external(path) or question.folder is None:
+        return path
+    file = (question.folder / path).resolve()
+    if not file.is_file():
+        raise UserError(f"{question.origin}: image {path} not found.")
+    content = file.read_bytes()
+    for embedded in files:
+        if embedded.content == content and Path(embedded.name).suffix == file.suffix:
+            return plugin_file_src(embedded.name)
+    name, number = file.name, 2
+    while any(embedded.name == name for embedded in files):
+        name = f"{file.stem}-{number}{file.suffix}"
+        number += 1
+    files.append(EmbeddedFile(name, content))
+    return plugin_file_src(name)
