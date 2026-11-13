@@ -79,3 +79,28 @@ def test_without_collection_config_reports_an_error(
 
     assert exit_code == 1
     assert "No moodle-qc.yaml found" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("qtype", ["multichoice", "kprime", "mtf", "sc"])
+def test_generates_each_question_of_the_reference_file(
+    qtype: str, reference_collection: Path, tmp_path: Path
+) -> None:
+    output = tmp_path / "import.xml"
+
+    run_generate([reference_collection], output)
+
+    assert_moodle_xml_equal(
+        select_questions(REFERENCE_XML, qtype),
+        select_questions(output.read_text(encoding="utf-8"), qtype),
+        ignore_question_ids=True,
+    )
+
+
+def test_generates_the_whole_reference_file(reference_collection: Path, tmp_path: Path) -> None:
+    output = tmp_path / "import.xml"
+
+    run_generate([reference_collection], output)
+
+    assert_moodle_xml_equal(
+        REFERENCE_XML, output.read_text(encoding="utf-8"), ignore_question_ids=True
+    )

@@ -1,3 +1,4 @@
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -79,9 +80,11 @@ def test_existing_question_id_is_overwritten_where_it_is(tmp_path: Path) -> None
         "Was beschreibt ein Error Budget?", "Was ist ein Error Budget?"
     )
 
+    before = set(sources(collection))
+
     extract(export, collection, tmp_path)
 
-    assert list(sources(collection)) == ["anywhere/error-budget.md"]
+    assert set(sources(collection)) == before
     assert "Was ist ein Error Budget?" in moved.read_text(encoding="utf-8")
 
 
@@ -121,3 +124,36 @@ def test_unreadable_question_source_stops_extract(
     assert exit_code == 1
     assert "broken.md: can't read answer line" in capsys.readouterr().err
     assert not (collection / "SW09" / "sw09-slo-begriffe.md").exists()
+
+
+def test_moodle_reexport_extracts_and_generates_back_to_the_same_content(tmp_path: Path) -> None:
+    export = moodle_fixture("moodle-xml-reference.reexport.xml")
+    collection = empty_collection(tmp_path / "questions", REFERENCE_CONFIG)
+
+    assert extract(export, collection, tmp_path) == 0
+    generated = generate([collection], tmp_path / "import.xml")
+
+    assert_moodle_xml_equal(export, generated, ignore_question_ids=True)
+
+
+def test_moodle_reexport_extracts_to_the_reference_sources(tmp_path: Path) -> None:
+    collection = copy_collection("reference", tmp_path / "questions")
+    git_commit_all(collection)
+    original = sources(collection)
+    export = generate([collection], tmp_path / "import.xml")
+    reexport = moodle_fixture("moodle-xml-reference.reexport.xml")
+    # Moodle's re-export of our import file carries the question IDs of the import file:
+    ids = {
+        q.findtext("name/text"): q.findtext("idnumber")
+        for q in ET.fromstring(export).iter("question")
+    }
+    root = ET.fromstring(reexport)
+    for question in root.iter("question"):
+        idnumber = question.find("idnumber")
+        if idnumber is not None and question.get("type") != "category":
+            idnumber.text = ids[(question.findtext("name/text") or "").strip()]
+    reexport = ET.tostring(root, encoding="unicode")
+
+    extract(reexport, collection, tmp_path)
+
+    assert sources(collection) == original
