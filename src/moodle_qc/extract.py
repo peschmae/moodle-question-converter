@@ -19,8 +19,9 @@ from moodle_qc.naming import (
     question_id_from_path,
     slug,
 )
-from moodle_qc.qtypes import handler_for
+from moodle_qc.qtypes import RAW, handler_for
 from moodle_qc.qtypes.base import QuestionType, read_field, text_of
+from moodle_qc.qtypes.raw import RawQuestion
 from moodle_qc.source import SourceDocument, format_source, parse_source
 
 KEPT_FROM_EXISTING = ("id", "name", "category", "lang")
@@ -60,9 +61,7 @@ def _plan(
 ) -> ExtractedSource:
     element = exported.element
     qtype = element.get("type", "")
-    handler = handler_for(qtype)
-    if handler is None:
-        raise UserError(f"Question type {qtype!r} is not supported yet.")
+    handler = handler_for(qtype) or RAW
     name = text_of(element, "name")
     question_id = text_of(element, "idnumber")
 
@@ -99,6 +98,18 @@ def question_document(
     """The question source for one exported question, keeping what only the existing source
     knows (notes, explicit name/ID/category/lang)."""
     qtype = handler.name
+    kept = {
+        k: existing.front_matter[k]
+        for k in KEPT_FROM_EXISTING
+        if existing and k in existing.front_matter
+    }
+    if isinstance(handler, RawQuestion):
+        return SourceDocument(
+            front_matter={"type": qtype, **kept},
+            title=existing.title if existing and "name" in kept else text_of(element, "name"),
+            text=handler.read(element, "", lambda html, files: html).text or "",
+            notes=existing.notes if existing else "",
+        )
 
     def markdown(html: str, files: dict[str, bytes]) -> str:
         return to_markdown(html, pre_style=collection.pre_style)
@@ -122,11 +133,7 @@ def question_document(
     result = handler.read(element, text, markdown, existing)
     settings.update(result.settings)
 
-    front_matter: dict[str, Any] = {"type": qtype}
-    if existing:
-        front_matter.update(
-            {k: existing.front_matter[k] for k in KEPT_FROM_EXISTING if k in existing.front_matter}
-        )
+    front_matter: dict[str, Any] = {"type": qtype, **kept}
     front_matter.update(_differences(settings, collection.defaults_for(qtype)))
     name = text_of(element, "name")
     keeps_name = existing is not None and "name" in existing.front_matter

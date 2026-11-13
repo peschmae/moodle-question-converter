@@ -11,6 +11,7 @@ from moodle_qc.markdown import render
 from moodle_qc.naming import category_path, question_id_from_path
 from moodle_qc.qtypes import handler_for
 from moodle_qc.qtypes.base import QuestionType, add_field, flag
+from moodle_qc.qtypes.raw import RawQuestion
 from moodle_qc.question import Question, RenderedText
 from moodle_qc.source import parse_source
 from moodle_qc.xmlnode import Node, serialize
@@ -53,6 +54,8 @@ def require_handler(question: Question) -> QuestionType:
 def question_node(question: Question, collection: Collection) -> Node:
     """The ``<question>`` element of a question."""
     handler = require_handler(question)
+    if isinstance(handler, RawQuestion):
+        return handler.node(question)
     settings = question.settings
 
     def render_field(markdown: str) -> RenderedText:

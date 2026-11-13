@@ -10,7 +10,7 @@ from pathlib import Path
 from moodle_qc.collection import Collection
 from moodle_qc.convert import load_question
 from moodle_qc.errors import UserError
-from moodle_qc.qtypes import handler_for
+from moodle_qc.qtypes import RAW, handler_for
 from moodle_qc.question import COMMON_FRONT_MATTER, Question
 
 COMBINED_FEEDBACK_KEYS = frozenset({"show_num_correct"})
@@ -64,13 +64,14 @@ def validate(collection: Collection, paths: Sequence[Path]) -> Validated:
 
 
 def _question_problems(collection: Collection, question: Question) -> list[str]:
+    handler = handler_for(question.qtype)
+    moodle_type = RAW.inner_type(question) if handler is RAW else question.qtype
     allowed = collection.allowed_types
-    if allowed is not None and question.qtype not in allowed:
+    if allowed is not None and moodle_type is not None and moodle_type not in allowed:
         return [
-            f"question type {question.qtype!r} is not allowed by the collection config "
+            f"question type {moodle_type!r} is not allowed by the collection config "
             f"(allowed: {', '.join(sorted(allowed))})"
         ]
-    handler = handler_for(question.qtype)
     if handler is None:
         return [f"unsupported question type {question.qtype!r}"]
     problems: list[str] = []
